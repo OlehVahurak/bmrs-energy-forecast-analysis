@@ -7,7 +7,7 @@ Repository contents
 
 Requirements
 - Python 3.8+
-- Python packages: `pandas`, `numpy`, `matplotlib`, `pytz`, `requests`
+- Python packages: `pandas`, `numpy`, `matplotlib`, `pytz`, `requests`, `reportlab`, `Pillow`
 
 Quick start
 
@@ -28,7 +28,7 @@ source .venv/bin/activate
 
 ```bash
 pip install --upgrade pip
-pip install pandas numpy matplotlib pytz requests
+pip install -r requirements.txt
 ```
 
 4. (Headless/server) If running without a display set Matplotlib backend:
@@ -52,20 +52,24 @@ python bmrs_analysis.py --help
 **Available options:**
 - `--date YYYY-MM-DD` (or `-d`) — Analysis date (default: 2025-11-20)
 - `--use-real` — Fetch live BMRS data (requires `BMRS_API_KEY` environment variable)
-- `--outdir PATH` — Output directory for PNG files (default: `outputs/`)
+- `--outdir PATH` — Output directory for PNG files and PDF report (default: `outputs/`)
+- `--no-pdf` — Skip PDF report generation (only generate PNG files)
 
 **Examples:**
 
 ```bash
-# Default: simulated data for 2025-11-20, save to outputs/
+# Default: simulated data for 2025-11-20, save to outputs/ with PDF
 python bmrs_analysis.py
 
-# Custom date with simulated data
+# Custom date with simulated data and PDF
 python bmrs_analysis.py --date 2025-11-15 --outdir my_results/
 
-# Use real BMRS data (requires API key)
+# Use real BMRS data (requires API key) and generate PDF
 export BMRS_API_KEY="YOUR_API_KEY"
 python bmrs_analysis.py --date 2025-11-20 --use-real --outdir outputs/
+
+# Generate PNGs only, skip PDF
+python bmrs_analysis.py --no-pdf
 ```
 
 What the script produces
@@ -73,6 +77,10 @@ What the script produces
 - `indicated_imbalance_current_YYYY-MM-DD.png` — current/latest indicated imbalance forecast only.
 - `wind_forecast_vs_actual_YYYY-MM-DD.png` and `solar_forecast_vs_actual_YYYY-MM-DD.png` — wind/solar forecast vs actuals.
 - `wind_difference_table.png` and `solar_difference_table.png` — summary tables with forecast errors.
+- **`BMRS_Report_YYYY-MM-DD.pdf`** — comprehensive PDF report containing:
+  - All graphs (imbalance evolution, current imbalance, wind/solar forecast vs actuals)
+  - Error tables with summary statistics (Average Error, Mean Absolute Error)
+  - Expert commentary on forecast errors and system impact
 
 All outputs are saved in the directory specified by `--outdir` (default: `outputs/`) with ISO date suffixes.
 
