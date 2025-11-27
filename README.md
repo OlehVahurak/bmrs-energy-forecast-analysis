@@ -43,27 +43,48 @@ export MPLBACKEND=Agg
 python bmrs_analysis.py
 ```
 
+The script supports the following CLI flags:
+
+```bash
+python bmrs_analysis.py --help
+```
+
+**Available options:**
+- `--date YYYY-MM-DD` (or `-d`) — Analysis date (default: 2025-11-20)
+- `--use-real` — Fetch live BMRS data (requires `BMRS_API_KEY` environment variable)
+- `--outdir PATH` — Output directory for PNG files (default: `outputs/`)
+
+**Examples:**
+
+```bash
+# Default: simulated data for 2025-11-20, save to outputs/
+python bmrs_analysis.py
+
+# Custom date with simulated data
+python bmrs_analysis.py --date 2025-11-15 --outdir my_results/
+
+# Use real BMRS data (requires API key)
+export BMRS_API_KEY="YOUR_API_KEY"
+python bmrs_analysis.py --date 2025-11-20 --use-real --outdir outputs/
+```
+
 What the script produces
-- `indicated_imbalance_evolution.png` — comparison of previous vs current indicated imbalance forecast across settlement periods.
-- `indicated_imbalance.png` — current/latest indicated imbalance forecast only.
-- (If extended) `*_forecast_vs_actual.png` and `*_difference_table.png` — for wind/solar forecast vs actuals and summary tables.
+- `indicated_imbalance_evolution_YYYY-MM-DD.png` — comparison of previous vs current indicated imbalance forecast across settlement periods.
+- `indicated_imbalance_current_YYYY-MM-DD.png` — current/latest indicated imbalance forecast only.
+- `wind_forecast_vs_actual_YYYY-MM-DD.png` and `solar_forecast_vs_actual_YYYY-MM-DD.png` — wind/solar forecast vs actuals.
+- `wind_difference_table.png` and `solar_difference_table.png` — summary tables with forecast errors.
+
+All outputs are saved in the directory specified by `--outdir` (default: `outputs/`) with ISO date suffixes.
 
 Using real BMRS data
 
-To fetch live BMRS data you need an API key from Elexon/BMRS. Set it in the environment and enable live mode in the script:
+To fetch live BMRS data you need an API key from Elexon/BMRS:
 
 ```bash
 export BMRS_API_KEY="YOUR_API_KEY"
-# then in bmrs_analysis.py set USE_REAL_BMRS = True
+python bmrs_analysis.py --use-real --date 2025-11-20
 ```
 
 Notes
-- The script is written to fall back to deterministic simulated data when BMRS data is unavailable or when `USE_REAL_BMRS` is `False`.
-- Modify `SELECTED_DATE` inside the script to change the analysis day, or add CLI handling if you prefer.
-
-Suggested next steps (optional)
-- Add a `requirements.txt` file: `pip freeze > requirements.txt`.
-- Add CLI flags (`--date`, `--use-real`, `--outdir`) using `argparse`.
-- Save outputs in an `outputs/` directory with datestamps.
-
-If you want, I can add any of the above optional improvements — tell me which one to implement next.
+- The script falls back to deterministic simulated data when BMRS data is unavailable or when `--use-real` is not set.
+- Output files include an ISO date stamp (e.g., `2025-11-20`) for easy tracking across multiple runs.
