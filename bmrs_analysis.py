@@ -8,6 +8,12 @@ from pathlib import Path
 import pytz
 import requests
 import time as time_mod
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreak, Table, TableStyle
+from reportlab.lib import colors
+from PIL import Image as PILImage
 
 # =======================================================
 # ========== CONFIGURATION AND SETUP ==========
@@ -409,11 +415,143 @@ def _print_final_report(wind_png, solar_png, date):
     print(_format_impact_section())
 
 
+def generate_pdf_report(date_to_run, outdir="outputs"):
+    """Generate a comprehensive PDF report with graphs, tables, and commentary."""
+    outdir = Path(outdir)
+    date_str = date_to_run.isoformat()
+    pdf_filename = outdir / f"BMRS_Report_{date_str}.pdf"
+    
+    # Create PDF document
+    doc = SimpleDocTemplate(str(pdf_filename), pagesize=A4, topMargin=0.5*inch, bottomMargin=0.5*inch)
+    story = []
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#1f4788'),
+        spaceAfter=12,
+        alignment=1  # Center
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        textColor=colors.HexColor('#2c5aa0'),
+        spaceAfter=8,
+        spaceBefore=8
+    )
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        parent=styles['BodyText'],
+        fontSize=11,
+        alignment=4  # Justify
+    )
+    
+    # Title
+    story.append(Paragraph(f"📊 BMRS Energy Forecast Analysis Report", title_style))
+    story.append(Paragraph(f"Date: {date_str}", styles['Normal']))
+    story.append(Spacer(1, 0.3*inch))
+    
+    # Part 1: Indicated Imbalance
+    story.append(Paragraph("Part 1: Indicated Imbalance Evolution", heading_style))
+    
+    evolution_path = outdir / f"indicated_imbalance_evolution_{date_str}.png"
+    if evolution_path.exists():
+        img = Image(str(evolution_path), width=7*inch, height=3.5*inch)
+        story.append(img)
+        story.append(Spacer(1, 0.1*inch))
+    
+    current_path = outdir / f"indicated_imbalance_current_{date_str}.png"
+    if current_path.exists():
+        img = Image(str(current_path), width=7*inch, height=2.5*inch)
+        story.append(img)
+        story.append(Spacer(1, 0.2*inch))
+    
+    story.append(PageBreak())
+    
+    # Part 2: Wind & Solar Forecast vs Actuals
+    story.append(Paragraph("Part 2: Wind & Solar Forecast vs Actuals", heading_style))
+    
+    wind_path = outdir / f"wind_forecast_vs_actual_{date_str}.png"
+    if wind_path.exists():
+        story.append(Paragraph("Wind Generation", styles['Heading3']))
+        img = Image(str(wind_path), width=7*inch, height=3*inch)
+        story.append(img)
+        story.append(Spacer(1, 0.1*inch))
+    
+    solar_path = outdir / f"solar_forecast_vs_actual_{date_str}.png"
+    if solar_path.exists():
+        story.append(Paragraph("Solar Generation", styles['Heading3']))
+        img = Image(str(solar_path), width=7*inch, height=3*inch)
+        story.append(img)
+        story.append(Spacer(1, 0.2*inch))
+    
+    story.append(PageBreak())
+    
+    # Error Tables
+    story.append(Paragraph("Forecast Error Tables", heading_style))
+    
+    wind_table_path = outdir / "wind_difference_table.png"
+    if wind_table_path.exists():
+        img = Image(str(wind_table_path), width=7*inch, height=3.5*inch)
+        story.append(img)
+        story.append(Spacer(1, 0.2*inch))
+    
+    solar_table_path = outdir / "solar_difference_table.png"
+    if solar_table_path.exists():
+        img = Image(str(solar_table_path), width=7*inch, height=3.5*inch)
+        story.append(img)
+        story.append(Spacer(1, 0.2*inch))
+    
+    story.append(PageBreak())
+    
+    # Commentary Section
+    story.append(Paragraph("Impact of Forecast Error on the System", heading_style))
+    
+    commentary_text = (
+        "The difference between the day-ahead Forecast and the Actual generation is the forecast error "
+        "(Actual - Forecast). This error directly creates an imbalance that the system operator must "
+        "correct in real-time.<br/><br/>"
+        "<b>Over-generation scenario:</b> If Actual generation significantly exceeds the Forecast, "
+        "the system has a surplus. Operators may reduce generation, increase demand through ancillary services, "
+        "or balance the market through bids/offers.<br/><br/>"
+        "<b>Under-generation scenario:</b> If Actual generation falls below the Forecast, the system faces a deficit. "
+        "Operators must bring additional generation online quickly through reserve activation or emergency procedures.<br/><br/>"
+        "<b>Primary impacts:</b><br/>"
+        "• Increased balancing costs (additional balancing energy required)<br/>"
+        "• Additional cycling of units (reduced efficiency, increased wear)<br/>"
+        "• Larger reserve requirements (grid stability concerns)<br/>"
+        "• System frequency deviation (potential grid instability)<br/>"
+        "• Reduced system efficiency and increased operational complexity"
+    )
+    
+    story.append(Paragraph(commentary_text, body_style))
+    story.append(Spacer(1, 0.2*inch))
+    
+    # Footer
+    footer_text = (
+        f"<br/><br/><i>Report generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}. "
+        "Data source: BMRS simulated/actual records.</i>"
+    )
+    story.append(Paragraph(footer_text, styles['Normal']))
+    
+    # Build PDF
+    doc.build(story)
+    print(f"PDF Report saved: {pdf_filename}")
+    return pdf_filename
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="BMRS analysis runner")
     parser.add_argument("--date", "-d", type=str, default=None, help="Date YYYY-MM-DD for analysis (default: SELECTED_DATE in file)")
     parser.add_argument("--use-real", action="store_true", help="Fetch real BMRS data (requires BMRS_API_KEY env var)")
-    parser.add_argument("--outdir", type=str, default="outputs", help="Output directory for PNGs")
+    parser.add_argument("--outdir", type=str, default="outputs", help="Output directory for PNGs and PDF")
+    parser.add_argument("--no-pdf", action="store_true", help="Skip PDF report generation")
     args = parser.parse_args()
 
     # determine date to run
@@ -433,3 +571,10 @@ if __name__ == "__main__":
 
     wind_table_png, solar_table_png = execute_analysis(date_to_run, outdir=args.outdir)
     _print_final_report(wind_table_png, solar_table_png, date_to_run)
+    
+    # Generate PDF report (unless disabled)
+    if not args.no_pdf:
+        try:
+            generate_pdf_report(date_to_run, outdir=args.outdir)
+        except Exception as e:
+            print(f"Warning: Failed to generate PDF report: {e}")

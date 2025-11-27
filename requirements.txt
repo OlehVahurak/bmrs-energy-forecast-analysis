@@ -3,3 +3,5 @@ numpy
 matplotlib
 pytz
 requests
+reportlab
+Pillow
