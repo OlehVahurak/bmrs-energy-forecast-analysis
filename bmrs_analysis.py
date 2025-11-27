@@ -410,5 +410,26 @@ def _print_final_report(wind_png, solar_png, date):
 
 
 if __name__ == "__main__":
-    wind_table_png, solar_table_png = execute_analysis(SELECTED_DATE)
-    _print_final_report(wind_table_png, solar_table_png, SELECTED_DATE)
+    parser = argparse.ArgumentParser(description="BMRS analysis runner")
+    parser.add_argument("--date", "-d", type=str, default=None, help="Date YYYY-MM-DD for analysis (default: SELECTED_DATE in file)")
+    parser.add_argument("--use-real", action="store_true", help="Fetch real BMRS data (requires BMRS_API_KEY env var)")
+    parser.add_argument("--outdir", type=str, default="outputs", help="Output directory for PNGs")
+    args = parser.parse_args()
+
+    # determine date to run
+    if args.date:
+        try:
+            date_to_run = datetime.fromisoformat(args.date).date()
+        except Exception:
+            raise SystemExit("Invalid date format. Use YYYY-MM-DD.")
+    else:
+        date_to_run = SELECTED_DATE
+
+    # set runtime mode for BMRS
+    USE_REAL_BMRS = bool(args.use_real)
+    if USE_REAL_BMRS and BMRS_API_KEY is None:
+        print("Warning: --use-real set but BMRS_API_KEY not found in environment. Falling back to simulated data.")
+        USE_REAL_BMRS = False
+
+    wind_table_png, solar_table_png = execute_analysis(date_to_run, outdir=args.outdir)
+    _print_final_report(wind_table_png, solar_table_png, date_to_run)
